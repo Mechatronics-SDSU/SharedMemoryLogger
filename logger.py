@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 import time
 import shared_memory
 import os
@@ -7,48 +8,104 @@ from multiprocessing import Array, Value
 
 
 class Logger:
-    def __init__(self, shared_memory_object, log_file='tmp.log', log_frequency=.1,log_dir='logs'):
+    def __init__(self, shared_memory_object, log_file=None, log_frequency=.1,log_dir='logs', var_names_f = None):
         
-        self.log_file = log_file
+        self.log_file = Logger._get_log_file(log_file)
+        self.logger = None # Placeholder, initialized later
+        # FIXME: BAD PRACTICE
         self.shared_memory_object = shared_memory_object
         self.log_frequency = log_frequency
         self.log_dir = log_dir
+        # FIXME: IMPLEMENT
+        self.var_names = Logger.get_var_names(
+                    var_names_f
+                ) # File controlling which variables to be logged. Used in conjuction with plotter.
 
-    def log_shared_memory(self):
+        self.__START_TIME = time.time()
+
+    def print(self):
+        print(f'Log file: {self.log_file}')
+        print(f'Shared memory object: {self.shared_memory_object}')
+        print(f'Log frequency: {self.log_frequency}')
+        print(f'Log dir: {self.log_dir}')
+        print(f'Variable names: {self.var_names}')
+        print(f'Start time: {self.__START_TIME}')
+
+    def _get_log_file(log_file):
+        # Wrapper responsible for returning the log filename. If None is provided (default), 
+        # returns a string representation of the day/time 
+
+        if not log_file:
+            # Create a pathname from the day/time at invocation
+            return os.path.normpath(
+                        datetime.now().strftime('%m%d%y_%H_%M_%S.log')
+                    )
+
+        return log_file
+
+    def _unwrap(var) : # Helper function to unwrap (potentially high dimensional) values from shared memory
+        # Return string
+
+        # If it's an array
+        if isinstance(var, type(Array('d', [3]))):
+            out = ""
+            for x in list(var):
+                out += str(x) + ' '
+
+            return out
+
+        # If it's a value
+        if isinstance(var, type(Value('d', 1.0))):
+            return var.value
+
+        raise Exception('var was neither of type Array nor Value\nType: {}'.format(type(var)))
+
+    def get_var_names(var_names_f : str = None) -> list:
+        # Should try to read from a file, if one exists. Returns a list of attributes
+        # to read from.
+
+        if var_names_f:
+            # FIXME: IMPLEMENT
+            pass
+        else:
+            return ['dvl_yaw', 'dvl_pitch', 'dvl_roll', 'dvl_x', 'dvl_y', 'dvl_z']
+
+    def get_vars(shared_mem, var_names):
+        attrs = shared_mem.__dict__
+        ret = [k for k in attrs.keys() if k in var_names]
+        return ret
+
+    def log_shared_memory(self, curr_format='%(asctime)s %(levelname)s:%(message)s'):
         # Set up logging
         logging.basicConfig(filename=self.log_file, level=logging.DEBUG,
-                            format='%(asctime)s %(levelname)s:%(message)s')
+                            format=curr_format)  # Format parameterized cause I think its silly as is
         self.logger = logging.getLogger()
         self.logger.info('Logger started.')
-        attributes = self.shared_memory_object.__dict__.keys()
+        
         while (self.shared_memory_object.running.value):
             # Log the values from shared memory
-            # Add more shared memory logs as needed
             # Sleep for a short duration to avoid excessive logging
-            for attribute in attributes:
-                value = getattr(self.shared_memory_object, attribute)
-                if isinstance(value, type(Array('d', 3))):
-                    value = list(value)
-                    for i in range(len(value)):
-                        self.logger.debug(f'{attribute}[{i}]: {value[i]}')
-                elif isinstance(value, type(Value)):
-                    value = value.value
-                    self.logger.debug(f'{attribute}: {value}')
-                else:   
-                    self.logger.debug(f'{attribute}: {value.value}')
-            # Log the shared memory values
+            curr_time = time.time() - self.__START_TIME
+            vars_to_log = Logger.get_vars(self.shared_memory_object, self.var_names)
+            for k in vars_to_log:
+                val = getattr(self.shared_memory_object, k)
+                self.logger.debug(f'{curr_time} : {k} : {Logger._unwrap(val)}')
             time.sleep(self.log_frequency)
             self.logger.debug('break')
         self.logger.info('Logger stopped.')
-        # Move the log file to the specified directory
-        self.graph_logs()
+
+        # Close the logger, move the log file to the specified directory
+        for handler in self.logger.handlers:
+            self.logger.removeHandler(handler)
+            handler.close()
+
         self.move_log_file()
 
     def move_log_file(self):
         # Move the log file to the specified directory
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-        new_log_file_path = os.path.join(self.log_dir, os.path.basename(str(time.time()) + '.log'))
+        new_log_file_path = os.path.join(self.log_dir, self.log_file)
         os.rename(self.log_file, new_log_file_path)
         self.log_file = new_log_file_path
         print(f"Log file moved to {self.log_dir}")
