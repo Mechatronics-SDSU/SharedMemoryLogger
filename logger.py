@@ -11,11 +11,14 @@ class Logger:
     def __init__(self, shared_memory_object, log_file=None, log_frequency=.1,log_dir='logs', var_names_f = None):
         
         self.log_file = Logger._get_log_file(log_file)
+
         self.logger = None # Placeholder, initialized later
         # FIXME: BAD PRACTICE
+
         self.shared_memory_object = shared_memory_object
         self.log_frequency = log_frequency
         self.log_dir = log_dir
+
         # FIXME: IMPLEMENT
         self.var_names = Logger.get_var_names(
                     var_names_f
@@ -60,13 +63,33 @@ class Logger:
 
         raise Exception('var was neither of type Array nor Value\nType: {}'.format(type(var)))
 
-    def get_var_names(var_names_f : str = None) -> list:
+    def get_var_names(var_names_f : str = None, ) -> list:
         # Should try to read from a file, if one exists. Returns a list of attributes
         # to read from.
 
         if var_names_f:
-            # FIXME: IMPLEMENT
-            pass
+            # Try to read the file:
+
+            try:
+                f = open(var_names_f)
+                lines = f.readlines()
+            except Exception as E:
+                print('Failed to open file!')
+                raise E
+
+            # Parse each line, get the names from each
+
+            out = []
+            for line in lines:
+                # Split by the ':', ditch everything before
+                line = [x.strip() for x in line.split(':')][1:]
+
+                # Split by ',' and append to list
+                out += [y.strip(' ,') for x in line for y in x.split(',')]
+    
+            return out
+
+
         else:
             return ['dvl_yaw', 'dvl_pitch', 'dvl_roll', 'dvl_x', 'dvl_y', 'dvl_z']
 
@@ -95,6 +118,7 @@ class Logger:
         self.logger.info('Logger stopped.')
 
         # Close the logger, move the log file to the specified directory
+        # TODO: MOVE THIS TO A .close() FUNCTION
         for handler in self.logger.handlers:
             self.logger.removeHandler(handler)
             handler.close()
@@ -110,6 +134,8 @@ class Logger:
         self.log_file = new_log_file_path
         print(f"Log file moved to {self.log_dir}")
 
+    # TODO: COMPLETE PLOTTER MODULE
+    '''
     def graph_logs(self):
         self.logger.setLevel(logging.WARNING)
         # Read the log file and plot the values
@@ -168,6 +194,7 @@ class Logger:
         plt.show()
         print("Graphing complete.")
         self.logger.info('Graphing complete.')
+        '''
         
 
 

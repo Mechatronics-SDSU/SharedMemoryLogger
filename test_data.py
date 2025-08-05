@@ -4,14 +4,13 @@ from multiprocessing import Value, Array, Process
 import random
 import time
 
-def t_print(name, mode=None):
+def t_print(name, mode=None, err=None):
     if mode=='start':
         print('||| Testing {} |||'.format(name))
     if mode=='success':
         print('||| Test completed for {} |||\n\n'.format(name))
     if mode=='fail':
-        #FIXME: IMPLEMENT
-        print('FIXME: IMPLEMENT in t_print')
+        print('||| ERROR in Test {} |||:\n\t{}'.format(name, err))
 
 def mock_data_generator(value):
     if isinstance(value, float):
@@ -34,24 +33,22 @@ def test_unwrap(_print_test=False):
         print('Val: {}\nArr: {}'.format(val_test, arr_test))
     t_print('unwrap', 'success')
 
-# FIXME: DELETE
-def __test_shared_memory(shared_memory_object):
-    while (shared_memory_object.running.value):
-        items = list(shared_memory_object.__dict__.items())
-        # Iterate through all attributes of the shared memory object
-        # and update their values with mock data
-        # This simulates real-time data updates for testing purposes
-        for _, value in items:
-            if isinstance(value, type(Array('d', 3))):
-                for i in range(len(value)):
-                    value[i] = mock_data_generator(value[i])
-            else:
-                value.value = mock_data_generator(value.value)
+def test_get_var_names(f_name, print_vals=False):
+    t_print('get_var_names', 'start')
+    
+    try:
+        names = Logger.get_var_names(f_name)
+        if print_vals:
+            for name in names:
+                print(name)
 
-        # Simulate a short delay to mimic real-time data updates
-        time.sleep(0.1)
-        # print(items)
-    print("Shared memory test completed successfully.")
+        print(f'Length: {len(names)}')
+    except Exception as E:
+        t_print('get_var_names', 'fail', E)
+        raise E
+
+    t_print('get_var_names', 'success')
+
 
 def test_get_vars(print_vals = False):
     t_print('get_vars', 'start')
@@ -115,7 +112,7 @@ def integration_test(config_f=None, test_time=5) :
     t_print('integration_test', 'start')
 
     shared_memory_object = shared_memory.SharedMemoryWrapper()
-    logger_obj = Logger(shared_memory_object)
+    logger_obj = Logger(shared_memory_object, var_names_f=config_f)
 
     logger_P = Process(target=logger_obj.log_shared_memory, kwargs={'curr_format' : '%(message)s'})
 
@@ -143,10 +140,13 @@ def main():
     test_unwrap(True)
     test_get_vars(True)
 
+    test_get_var_names('test.ini', True)
+
     # S = shared_memory.SharedMemoryWrapper()
     # test_shared_memory(S, print_vals=True)
 
-    integration_test(test_time=1)
+    integration_test(config_f='test.ini', test_time=1)
+
 
 
 if __name__ == '__main__':
