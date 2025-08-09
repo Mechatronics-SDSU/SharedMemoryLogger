@@ -3,8 +3,10 @@ from logger import Logger
 from multiprocessing import Value, Array, Process
 import random
 import time
+from plotter import Plotter
+import numpy as np
 
-def t_print(name, mode=None, err=None):
+def t_print(name, mode, err=None):
     if mode=='start':
         print('||| Testing {} |||'.format(name))
     if mode=='success':
@@ -134,9 +136,29 @@ def integration_test(config_f=None, test_time=5) :
 
     t_print('integration_test', 'success')
 
+def test_parse_data(f_name, debug=True):
+
+    t_print('parse_input_file', 'start')
+
+    # Test error handling:
+    print('This should error, but not crash: ')
+    ret = Plotter.parse_input_file('foo', debug)
+    if ret:
+        t_print('parse_input_file', 'fail', f'Should return None, returned {ret}')
+
+    # Test functionality
+    ret = Plotter.parse_input_file(f_name, debug)
+
+    print(f'Output type: {type(ret)}')
+    for k, v in ret.items():
+        print(f'Shape of {k}: \n\t{np.shape(v)}')
+
+    t_print('parse_input_file', 'success')
 
 
-def main():
+
+
+def test_logger():
     test_unwrap(True)
     test_get_vars(True)
 
@@ -145,10 +167,14 @@ def main():
     # S = shared_memory.SharedMemoryWrapper()
     # test_shared_memory(S, print_vals=True)
 
-    integration_test(config_f='test.ini', test_time=1)
+    integration_test(config_f='test.ini', test_time=5)
+
+def test_plotter():
+    test_parse_data('logs/080925_06_51_10.log', debug=False)
 
 
 
 if __name__ == '__main__':
-    main()
+    # test_logger()
+    test_plotter()
     
