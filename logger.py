@@ -8,7 +8,7 @@ from multiprocessing import Array, Value
 
 
 class Logger:
-    def __init__(self, shared_memory_object, log_file=None, log_frequency=.1,log_dir='logs', var_names_f = None):
+    def __init__(self, shared_memory_object, log_file=None, log_frequency=.01,log_dir='logs', var_names_f = None):
         
         self.log_file = Logger._get_log_file(log_file)
 
@@ -19,7 +19,6 @@ class Logger:
         self.log_frequency = log_frequency
         self.log_dir = log_dir
 
-        # FIXME: IMPLEMENT
         self.var_names = Logger.get_var_names(
                     var_names_f
                 ) # File controlling which variables to be logged. Used in conjuction with plotter.
@@ -53,7 +52,7 @@ class Logger:
         if isinstance(var, type(Array('d', [3]))):
             out = ""
             for x in list(var):
-                out += str(x) + ' '
+                out += str(x) + ', '
 
             return out
 
@@ -134,67 +133,5 @@ class Logger:
         self.log_file = new_log_file_path
         print(f"Log file moved to {self.log_dir}")
 
-    # TODO: COMPLETE PLOTTER MODULE
-    '''
-    def graph_logs(self):
-        self.logger.setLevel(logging.WARNING)
-        # Read the log file and plot the values
-        with open(self.log_file, 'r') as f:
-            lines = f.readlines()
-
-        # Extract values from the log file
-        imu_lin_acc = []
-        imu_ang_vel = []
-        distance_from_object = []
-        depth = []
-        dvl_status = []
-        dvl_velocity_valid = []
-
-        for line in lines:
-            if 'imu_lin_acc[0]' in line:
-                imu_lin_acc.append(eval(line.split(': ')[1]))
-            elif 'imu_ang_vel[0]' in line:
-                imu_ang_vel.append(eval(line.split(': ')[1]))
-            elif 'distance_from_object' in line:
-                distance_from_object.append(float(line.split(': ')[1]))
-            elif 'depth' in line:
-                depth.append(float(line.split(': ')[1]))
-            elif 'running' in line:
-                dvl_status.append(bool(line.split(': ')[1]))
-            elif 'dvl_velocity_valid' in line:
-                dvl_velocity_valid.append(bool(line.split(': ')[1]))
-
-        # Plot the values
-        plt.figure(figsize=(10, 6))
-        plt.subplot(3, 2, 1)
-        plt.plot(imu_lin_acc)
-        plt.title('IMU Linear Acceleration')
-
-        plt.subplot(3, 2, 2)
-        plt.plot(imu_ang_vel)
-        plt.title('IMU Angular Velocity')
-
-        plt.subplot(3, 2, 3)
-        plt.plot(distance_from_object)
-        plt.title('Distance from Object')
-
-        plt.subplot(3, 2, 4)
-        plt.plot(depth)
-        plt.title('Depth')
-
-        plt.subplot(3, 2, 5)
-        plt.plot(dvl_status)
-        plt.title('DVL Status')
-
-        plt.subplot(3, 2, 6)
-        plt.plot(dvl_velocity_valid)
-        plt.title('DVL Velocity Valid')
-
-        plt.tight_layout()
-        plt.show()
-        print("Graphing complete.")
-        self.logger.info('Graphing complete.')
-        '''
-        
 
 
